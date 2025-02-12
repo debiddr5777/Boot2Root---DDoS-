@@ -20,3 +20,7 @@ This tool simulates a network stress test on a target URL by generating concurre
    ```bash
    git clone <repository_url>
    cd <repository_directory>
+
+## Usage
+   ```bash
+   python boot2root.py
