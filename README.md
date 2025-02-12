@@ -24,3 +24,8 @@ This tool simulates a network stress test on a target URL by generating concurre
 ## Usage
    ```bash
    python boot2root.py
+
+Screenshots
+
+![image](https://github.com/user-attachments/assets/dad7fda0-c03b-4cbc-aff0-bd4b6cbbbbc3)
+
