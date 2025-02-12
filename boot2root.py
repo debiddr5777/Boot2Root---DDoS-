@@ -44,7 +44,7 @@ def print_ascii_art():
  / /_/ / /_/ / /_/ / / /  / __// _, _/ /_/ / /_/ / / /    
 /_____/\____/\____/ /_/  /____/_/ |_|\____/\____/ /_/     
 
--NeveR QuiT!
+-NeveR QuiT!            Mailto: likundebi2024@gmail.com
     """)
     print(Fore.YELLOW + Style.BRIGHT + "\n🚀 Network Stress Testing Tool 🚀")
     print(Fore.YELLOW + "=================================")
