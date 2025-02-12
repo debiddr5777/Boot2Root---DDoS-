@@ -18,7 +18,7 @@ This tool simulates a network stress test on a target URL by generating concurre
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone <repository_url>
+   git clone https://github.com/debiddr5777/Boot2Root---DDoS-
    cd <repository_directory>
 
 ## Usage
