@@ -1,4 +1,4 @@
-
+USE THE TOOL ONLY FOR EDUCATIONAL PURPOSES. THE OWNER SHALL NOT BE LIABLE FOR ANY KIND OF ABUSING USAGE OF THIS TOOL ELSEWHERE.
 # Network Stress Testing Tool
 
 This tool simulates a network stress test on a target URL by generating concurrent HTTP requests while monitoring system resources. It also checks for DDoS protection before running the test.
