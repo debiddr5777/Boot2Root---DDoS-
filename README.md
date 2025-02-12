@@ -14,6 +14,9 @@ This tool simulates a network stress test on a target URL by generating concurre
 ## Requirements
 - Python 3.x
 - Libraries: `requests`, `psutil`, `colorama`
+  
+![image](https://github.com/user-attachments/assets/540a80c4-cf9a-4961-958e-d90956183357)
+![image](https://github.com/user-attachments/assets/d0072eeb-3c52-479c-828b-f73a783c384e)
 
 ## Installation
 1. Clone the repository:
@@ -25,7 +28,4 @@ This tool simulates a network stress test on a target URL by generating concurre
    ```bash
    python boot2root.py
 
-Screenshots
-
-![image](https://github.com/user-attachments/assets/dad7fda0-c03b-4cbc-aff0-bd4b6cbbbbc3)
 
