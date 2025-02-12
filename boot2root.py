@@ -6,6 +6,8 @@ import psutil
 import logging
 import signal
 import sys
+from datetime import datetime
+from urllib.parse import urlparse
 from colorama import Fore, Style, init
 
 init(autoreset=True)
@@ -27,6 +29,12 @@ logging.basicConfig(
 )
 
 stop_test = False
+total_requests = 0
+successful_requests = 0
+failed_requests = 0
+response_times = []
+start_time = time.time()
+results_filename = ""
 
 def print_ascii_art():
     print(Fore.CYAN + Style.BRIGHT + r"""
@@ -36,102 +44,113 @@ def print_ascii_art():
  / /_/ / /_/ / /_/ / / /  / __// _, _/ /_/ / /_/ / / /    
 /_____/\____/\____/ /_/  /____/_/ |_|\____/\____/ /_/     
 
--Never QUIT!
+-NeveR QuiT!
     """)
     print(Fore.YELLOW + Style.BRIGHT + "\n🚀 Network Stress Testing Tool 🚀")
     print(Fore.YELLOW + "=================================")
     print(Fore.GREEN + Style.BRIGHT + "🔹 Press Ctrl+C to stop the test.\n")
 
+def clean_url(user_input):
+    if not user_input.startswith(("http://", "https://")):
+        return f"https://{user_input}"
+    return user_input
+
+def display_stats():
+    while not stop_test:
+        elapsed_time = time.time() - start_time
+        avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+        request_per_sec = total_requests / elapsed_time if elapsed_time > 0 else 0
+        response_trend = 0
+
+        if len(response_times) > 1:
+            response_trend = ((response_times[-1] - response_times[0]) / response_times[0]) * 100 if response_times[0] > 0 else 0
+        
+        print("\033[H\033[J", end="")  # Clear the terminal screen
+        print(Fore.YELLOW + f"📊 Total Requests Sent: {total_requests}")
+        print(Fore.GREEN + f"✅ Successful Requests: {successful_requests}")
+        print(Fore.RED + f"❌ Failed Requests: {failed_requests}")
+        print(Fore.BLUE + f"⚡ Requests Per Second: {request_per_sec:.2f}")
+        print(Fore.CYAN + f"⏳ Average Response Time: {avg_response_time:.4f} sec")
+        print(Fore.MAGENTA + f"📈 Response Time Trend: {response_trend:.2f}% change")
+        time.sleep(0.5)
+
 def signal_handler(sig, frame):
     global stop_test
-    logging.info(Fore.RED + "Ctrl+C detected. Stopping the stress test gracefully...")
     stop_test = True
+    save_choice = input(Fore.YELLOW + "\n💾 Save scan results? (Y/N): ").strip().lower()
+
+    if save_choice == "y":
+        save_results()
+        print(Fore.GREEN + f"💾 Results saved to {results_filename}")
+    else:
+        print(Fore.RED + "❌ Scan results not saved. Exiting.")
+
     sys.exit(0)
 
-def check_ddos_protection(target_url):
-    try:
-        response = requests.get(target_url)
-        headers = response.headers
-        print(Fore.CYAN + Style.BRIGHT + "\n🔍 Checking for DDoS protection...\n")
+def save_results():
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    domain = urlparse(target_url).netloc.replace(":", "_")
+    global results_filename
+    results_filename = f"{domain}_stress_test_{timestamp}.txt"
 
-        if "server" in headers and "cloudflare" in headers["server"].lower():
-            print(Fore.YELLOW + "⚠️ DDoS Protection: " + Fore.GREEN + "Cloudflare detected!")
-            return True
-        elif "cf-ray" in headers or "__cfduid" in response.cookies:
-            print(Fore.YELLOW + "⚠️ DDoS Protection: " + Fore.GREEN + "Cloudflare detected!")
-            return True
-        elif "server" in headers and "akamai" in headers["server"].lower():
-            print(Fore.YELLOW + "⚠️ DDoS Protection: " + Fore.GREEN + "Akamai detected!")
-            return True
-        elif "x-akamai-transformed" in headers:
-            print(Fore.YELLOW + "⚠️ DDoS Protection: " + Fore.GREEN + "Akamai detected!")
-            return True
-        elif "x-amz-cf-pop" in headers or "cloudfront" in headers.get("server", "").lower():
-            print(Fore.YELLOW + "⚠️ DDoS Protection: " + Fore.GREEN + "AWS Shield (CloudFront) detected!")
-            return True
-        else:
-            print(Fore.YELLOW + "✅ No known DDoS protection detected.")
-            return False
-    except requests.exceptions.RequestException as e:
-        print(Fore.RED + f"❌ Error: {e}")
-        return True
+    with open(results_filename, "w") as file:
+        file.write("📊 Stress Test Summary\n")
+        file.write("=========================\n")
+        file.write(f"Target: {target_url}\n")
+        file.write(f"Total Requests Sent: {total_requests}\n")
+        file.write(f"Successful Requests: {successful_requests}\n")
+        file.write(f"Failed Requests: {failed_requests}\n")
+        file.write(f"Requests Per Second: {total_requests / (time.time() - start_time):.2f}\n")
+        file.write(f"Average Response Time: {sum(response_times) / len(response_times) if response_times else 0:.4f} sec\n")
+        file.write(f"Response Time Trend: {((response_times[-1] - response_times[0]) / response_times[0]) * 100 if len(response_times) > 1 and response_times[0] > 0 else 0:.2f}%\n")
 
 def simulate_request(target_url):
-    global stop_test
+    global total_requests, successful_requests, failed_requests
     while not stop_test:
         try:
-            start_time = time.time()
+            start_req_time = time.time()
             response = requests.get(target_url, timeout=5)
-            end_time = time.time()
-            response_time = end_time - start_time
-            logging.info(Fore.GREEN + f"⚡ Response Time: {response_time:.4f}s, Status Code: {response.status_code}")
-        except requests.exceptions.RequestException as e:
-            logging.error(Fore.RED + f"❌ Request Failed: {e}")
-            if "Max retries exceeded" in str(e) or "Connection refused" in str(e):
-                logging.error(Fore.RED + "🚨 The site appears to be down!")
-                stop_test = True
-                break
-        time.sleep(1)
+            end_req_time = time.time()
+            total_requests += 1
+            response_times.append(end_req_time - start_req_time)
 
-def monitor_system_resources():
-    global stop_test
-    while not stop_test:
-        cpu_usage = psutil.cpu_percent(interval=1)
-        memory_usage = psutil.virtual_memory().percent
-        logging.info(Fore.BLUE + f"🖥️ CPU Usage: {cpu_usage}%, RAM Usage: {memory_usage}%")
-        time.sleep(5)
+            if response.status_code == 200:
+                successful_requests += 1
+            else:
+                failed_requests += 1
+        except requests.exceptions.RequestException:
+            failed_requests += 1
+        time.sleep(1)
 
 def run_stress_test(target_url, num_threads):
     global stop_test
     logging.info(Fore.CYAN + f"🚀 Starting Stress Test with {num_threads} concurrent requests to {target_url}...")
+    
+    stats_thread = threading.Thread(target=display_stats)
+    stats_thread.daemon = True
+    stats_thread.start()
+
     threads = []
     for _ in range(num_threads):
         thread = threading.Thread(target=simulate_request, args=(target_url,))
         thread.start()
         threads.append(thread)
 
-    monitor_thread = threading.Thread(target=monitor_system_resources)
-    monitor_thread.start()
-
     try:
         while not stop_test:
             time.sleep(1)
     except KeyboardInterrupt:
-        stop_test = True
+        signal_handler(None, None)
 
     for thread in threads:
         thread.join()
-    monitor_thread.join()
-    logging.info(Fore.CYAN + "✅ Stress Test Completed.")
 
 def main():
+    global target_url
     print_ascii_art()
-    target_url = input(Fore.YELLOW + "🌐 Enter the target server URL (e.g., http://yourserver.com): ").strip()
+    user_input = input(Fore.YELLOW + "🌐 Enter the target server URL (e.g., example.com or https://example.com): ").strip()
+    target_url = clean_url(user_input)
     
-    if check_ddos_protection(target_url):
-        print(Fore.RED + "🚧 The website is protected by DDoS protection. Exiting...")
-        sys.exit(0)
-
     threading_level = input(Fore.YELLOW + "🔧 Choose threading level (1-5): ").strip()
     try:
         level = int(threading_level)
